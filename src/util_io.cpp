@@ -193,9 +193,9 @@ void write_binvox(const unsigned int* vtable, const voxinfo v_info, const std::s
 	// Write BINARY Data (and compress it a bit using run-length encoding)
 	buf[len] = checkVoxel(0, 0, 0, v_info.gridsize, vtable);
 	buf[len + 1] = 0;
-	for (size_t x = 0; x < v_info.gridsize.x; x++){
-		for (size_t z = 0; z < v_info.gridsize.z; z++){
-			for (size_t y = 0; y < v_info.gridsize.y; y++){
+	for (size_t z = 0; z < v_info.gridsize.z; z++){
+		for (size_t y = 0; y < v_info.gridsize.y; y++){
+			for (size_t x = 0; x < v_info.gridsize.x; x++) {
 				char nextvalue = checkVoxel(x, y, z, v_info.gridsize, vtable);
 				if (nextvalue != buf[len] || buf[len+1] == (char) 255){
 					len += 2;
