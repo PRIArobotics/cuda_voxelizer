@@ -220,3 +220,44 @@ void write_binvox(const unsigned int* vtable, const voxinfo v_info, const std::s
 
 	output.close();
 }
+
+void write_npy(const unsigned int* vtable, const voxinfo v_info, const std::string base_filename) {
+	// Open file
+	string filename_output = base_filename + string("_") + to_string(v_info.gridsize.x) + string(".npy");
+#ifndef SILENT
+	fprintf(stdout, "[I/O] Writing data in npy format to %s \n", filename_output.c_str());
+#endif
+	ofstream output(filename_output.c_str(), ios::out | ios::binary);
+	assert(output);
+	string header;
+	header.reserve(128);
+	// magic & version (6 bytes magic, 1 byte major, 1 byte minor version)
+	header += "\x93NUMPY\x01\x00";
+	// header length of 118 (2 bytes le = "\x76\x00")
+	header += "\x76\x00";
+	// header
+	header += "{'descr': '|b1', 'fortran_order': False, 'shape': (";
+	header += to_string(v_info.gridsize.z) + ", ";
+	header += to_string(v_info.gridsize.y) + ", ";
+	header += to_string(v_info.gridsize.x) + "), }";
+	assert(header.length() < 128);
+	// padding
+	header.append(128 - header.length() - 1, ' ');
+	header += "\n";
+	assert(header.length() == 118);
+
+	// write header
+	output << header;
+
+	// Write BINARY Data (and compress it a bit using run-length encoding)
+	for (size_t z = 0; z < v_info.gridsize.z; z++) {
+		for (size_t y = 0; y < v_info.gridsize.y; y++) {
+			for (size_t x = 0; x < v_info.gridsize.x; x++) {
+				char nextvalue = checkVoxel(x, y, z, v_info.gridsize, vtable);
+				output.write(&nextvalue, 1);
+			}
+		}
+	}
+
+	output.close();
+}
