@@ -185,32 +185,38 @@ void write_binvox(const unsigned int* vtable, const voxinfo v_info, const std::s
 		v_info.bbox.max.z - v_info.bbox.min.z) << endl;
 	output << "data" << endl;
 
+	// worst case, RLE leads to 2 bytes per voxel
+	char *buf = (char*) calloc((size_t) v_info.gridsize.y * 2, sizeof(char));
+	assert(buf);
+	size_t len = 0;
+
 	// Write BINARY Data (and compress it a bit using run-length encoding)
-	char currentvalue, current_seen;
+	buf[len] = checkVoxel(0, 0, 0, v_info.gridsize, vtable);
+	buf[len + 1] = 0;
 	for (size_t x = 0; x < v_info.gridsize.x; x++){
 		for (size_t z = 0; z < v_info.gridsize.z; z++){
 			for (size_t y = 0; y < v_info.gridsize.y; y++){
-				if (x == 0 && y == 0 && z == 0){ // special case: first voxel
-					currentvalue = checkVoxel(0, 0, 0, v_info.gridsize, vtable);
-					output.write((char*)&currentvalue, 1);
-					current_seen = 1;
-					continue;
-				}
 				char nextvalue = checkVoxel(x, y, z, v_info.gridsize, vtable);
-				if (nextvalue != currentvalue || current_seen == (char) 255){
-					output.write((char*)&current_seen, 1);
-					current_seen = 1;
-					currentvalue = nextvalue;
-					output.write((char*)&currentvalue, 1);
+				if (nextvalue != buf[len] || buf[len+1] == (char) 255){
+					len += 2;
+					buf[len] = nextvalue;
+					buf[len+1] = 1;
 				}
 				else {
-					current_seen++;
+					buf[len+1]++;
 				}
 			}
+			output.write(buf, len);
+			buf[0] = buf[len];
+			buf[1] = buf[len+1];
+			len = 0;
+			// fprintf(stdout, "[DEBUG] %zd/%d; %zd/%d \n", x + 1, v_info.gridsize.x, z + 1, v_info.gridsize.z);
 		}
 	}
 
 	// Write rest
-	output.write((char*)&current_seen, 1);
+	output.write(buf, 2);
+	free(buf);
+
 	output.close();
 }
